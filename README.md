@@ -7,7 +7,7 @@
 
 ![Trained Agents][image1]
 
-This repository contains material related to Udacity's Value-based methods course.
+This repository contains material related to Udacity's Value-based Methods course.
 
 ## Table of Contents
 
