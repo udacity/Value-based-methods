@@ -1,55 +1,149 @@
-[//]: # (Image References)
+# Deep Q-Learning Agent for Unity Banana Environment
 
-[image1]: https://user-images.githubusercontent.com/10624937/42135619-d90f2f28-7d12-11e8-8823-82b970a54d7e.gif "Trained Agent"
+This project implements a **Deep Q-Network (DQN)** to solve the [Unity ML-Agents Banana environment](https://github.com/Unity-Technologies/ml-agents).  
+The agent learns to navigate the environment, collect yellow bananas (+1 reward), and avoid blue bananas (-1 reward).
 
-# Project 1: Navigation
+---
 
-### Introduction
+## 📂 Project Structure
 
-For this project, you will train an agent to navigate (and collect bananas!) in a large, square world.  
+```
+.
+├── Navigation.ipynb      # Main notebook to interact with the Unity environment
+├── model.py              # Defines the QNetwork (neural network model)
+├── dqn_agent.py          # Defines the Agent, replay buffer, and learning updates
+├── checkpoint.pth        # Saved trained model weights (after training)
+```
 
-![Trained Agent][image1]
+---
 
-A reward of +1 is provided for collecting a yellow banana, and a reward of -1 is provided for collecting a blue banana.  Thus, the goal of your agent is to collect as many yellow bananas as possible while avoiding blue bananas.  
+## 🧠 Environment Details
 
-The state space has 37 dimensions and contains the agent's velocity, along with ray-based perception of objects around agent's forward direction.  Given this information, the agent has to learn how to best select actions.  Four discrete actions are available, corresponding to:
-- **`0`** - move forward.
-- **`1`** - move backward.
-- **`2`** - turn left.
-- **`3`** - turn right.
+- **State space size**: 37  
+  (includes agent's velocity and ray-based perception of objects in front of it)
+- **Action space size**: 4 (discrete)
+  - `0` → Walk forward  
+  - `1` → Walk backward  
+  - `2` → Turn left  
+  - `3` → Turn right  
+- **Rewards**:  
+  - `+1` for collecting a yellow banana  
+  - `-1` for collecting a blue banana  
 
-The task is episodic, and in order to solve the environment, your agent must get an average score of +13 over 100 consecutive episodes.
+The task is episodic, and the environment is considered solved when the agent gets an **average score of +13 over 100 consecutive episodes**.
 
-### Getting Started
+---
 
-1. Download the environment from one of the links below.  You need only select the environment that matches your operating system:
-    - Linux: [click here](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P1/Banana/Banana_Linux.zip)
-    - Mac OSX: [click here](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P1/Banana/Banana.app.zip)
-    - Windows (32-bit): [click here](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P1/Banana/Banana_Windows_x86.zip)
-    - Windows (64-bit): [click here](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P1/Banana/Banana_Windows_x86_64.zip)
-    
-    (_For Windows users_) Check out [this link](https://support.microsoft.com/en-us/help/827218/how-to-determine-whether-a-computer-is-running-a-32-bit-version-or-64) if you need help with determining if your computer is running a 32-bit version or 64-bit version of the Windows operating system.
+## 🏗️ Q-Network (model.py)
 
-    (_For AWS_) If you'd like to train the agent on AWS (and have not [enabled a virtual screen](https://github.com/Unity-Technologies/ml-agents/blob/master/docs/Training-on-Amazon-Web-Service.md)), then please use [this link](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P1/Banana/Banana_Linux_NoVis.zip) to obtain the environment.
+```python
+class QNetwork(nn.Module):
+    def __init__(self, state_size, action_size, seed, fc1_units=64, fc2_units=64):
+        super(QNetwork, self).__init__()
+        self.fc1 = nn.Linear(state_size, fc1_units)
+        self.fc2 = nn.Linear(fc1_units, fc2_units)
+        self.fc3 = nn.Linear(fc2_units, action_size)
 
-2. Place the file in the course GitHub repository, in the `p1_navigation/` folder, and unzip (or decompress) the file. 
+    def forward(self, state):
+        x = F.relu(self.fc1(state))
+        x = F.relu(self.fc2(x))
+        return self.fc3(x)
+```
 
-### Instructions
+- Input: state vector (size 37)  
+- Hidden layers: 2 fully-connected layers with 64 units each  
+- Output: Q-values for each action (size 4)  
 
-Follow the instructions in `Navigation.ipynb` to get started with training your own agent!  
+---
 
-### (Optional) Challenge: Learning from Pixels
+## 🤖 Agent (dqn_agent.py)
 
-After you have successfully completed the project, if you're looking for an additional challenge, you have come to the right place!  In the project, your agent learned from information such as its velocity, along with ray-based perception of objects around its forward direction.  A more challenging task would be to learn directly from pixels!
+The agent uses:
+- **Replay Buffer** (stores past experiences for learning)
+- **Epsilon-Greedy Policy** (exploration vs exploitation)
+- **Target Network** (stabilizes training)
+- **Soft Updates** (controlled by `tau`)
+- **Adam Optimizer** with learning rate `5e-4`
 
-To solve this harder task, you'll need to download a new Unity environment.  This environment is almost identical to the project environment, where the only difference is that the state is an 84 x 84 RGB image, corresponding to the agent's first-person view.  (**Note**: Udacity students should not submit a project with this new environment.)
+Key hyperparameters:
+```python
+BUFFER_SIZE = 1e5   # replay buffer size
+BATCH_SIZE = 64     # minibatch size
+GAMMA = 0.99        # discount factor
+TAU = 1e-3          # soft update factor
+LR = 5e-4           # learning rate
+UPDATE_EVERY = 4    # update frequency
+```
 
-You need only select the environment that matches your operating system:
-- Linux: [click here](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P1/Banana/VisualBanana_Linux.zip)
-- Mac OSX: [click here](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P1/Banana/VisualBanana.app.zip)
-- Windows (32-bit): [click here](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P1/Banana/VisualBanana_Windows_x86.zip)
-- Windows (64-bit): [click here](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P1/Banana/VisualBanana_Windows_x86_64.zip)
+---
 
-Then, place the file in the `p1_navigation/` folder in the course GitHub repository, and unzip (or decompress) the file.  Next, open `Navigation_Pixels.ipynb` and follow the instructions to learn how to use the Python API to control the agent.
+## 🚀 Training (Navigation.ipynb)
 
-(_For AWS_) If you'd like to train the agent on AWS, you must follow the instructions to [set up X Server](https://github.com/Unity-Technologies/ml-agents/blob/master/docs/Training-on-Amazon-Web-Service.md), and then download the environment for the **Linux** operating system above.
+Run the training loop using:
+```python
+scores = dqn(n_episodes=2000)
+```
+
+- Episodes: up to 2000  
+- Early stopping: when average score ≥ 13 over 100 episodes  
+- Best checkpoint is saved automatically as `checkpoint.pth`  
+
+Plot training results:
+```python
+plt.plot(scores)
+plt.xlabel("Episode")
+plt.ylabel("Score")
+```
+
+---
+
+## 🎥 Watching the Trained Agent
+
+After training, watch the agent perform:
+```python
+watch_agent(n_episodes=5, render=True)
+```
+
+This will open a Unity window where you can see the agent collecting bananas!
+
+---
+
+## 📦 Installation
+
+1. Clone the repo & install dependencies:
+```bash
+git clone https://github.com/your-username/dqn-banana.git
+cd dqn-banana
+pip install -r requirements.txt
+```
+
+2. Download the Unity Banana environment from Udacity:  
+   - [Mac](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P1/Banana.app.zip)  
+   - [Windows (x86)](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P1/Banana_Windows_x86.zip)  
+   - [Windows (x86_64)](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P1/Banana_Windows_x86_64.zip)  
+   - [Linux](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P1/Banana_Linux.zip)  
+
+3. Extract and update the path in the notebook:
+```python
+env = UnityEnvironment(file_name="Banana.app")
+```
+
+---
+
+## 🏆 Results
+
+- The agent successfully solves the Banana environment, reaching an average score ≥ 13.  
+- Saved model weights are available in `checkpoint.pth`.
+
+---
+
+## 📖 References
+
+- Udacity Deep Reinforcement Learning Nanodegree  
+- Unity ML-Agents Toolkit  
+- [DQN Paper](https://www.cs.toronto.edu/~vmnih/docs/dqn.pdf) (Mnih et al., 2015)  
+
+---
+
+## ✍️ Author
+Krushna Thakkar  
